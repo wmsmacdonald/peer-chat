@@ -34,39 +34,39 @@ function getUserMediaSuccess(stream) {
 
 function getUserMediaError(error) {
     console.log(error);
+}
 
-    function start(isCaller) {
-        peerConnection = new RTCPeerConnection(peerConnectionConfig);
-        peerConnection.onicecandidate = gotIceCandidate;
-        peerConnection.onaddstream = gotRemoteStream;
-        peerConnection.addStream(localStream);
+function start(isCaller) {
+    peerConnection = new RTCPeerConnection(peerConnectionConfig);
+    peerConnection.onicecandidate = gotIceCandidate;
+    peerConnection.onaddstream = gotRemoteStream;
+    peerConnection.addStream(localStream);
 
-        if(isCaller) {
-            peerConnection.createOffer(gotDescription, createOfferError);
-        }
+    if(isCaller) {
+        peerConnection.createOffer(gotDescription, createOfferError);
     }
+}
 
-    function gotDescription(description) {
-        console.log('got description');
-        peerConnection.setLocalDescription(description, function () {
-            serverConnection.send(JSON.stringify({'sdp': description}));
-        }, function() {console.log('set description error')});
-    }
+function gotDescription(description) {
+    console.log('got description');
+    peerConnection.setLocalDescription(description, function () {
+        serverConnection.send(JSON.stringify({'sdp': description}));
+    }, function() {console.log('set description error')});
+}
 
-    function gotIceCandidate(event) {
-        if(event.candidate != null) {
-            serverConnection.send(JSON.stringify({'ice': event.candidate}));
-        }
+function gotIceCandidate(event) {
+    if(event.candidate != null) {
+        serverConnection.send(JSON.stringify({'ice': event.candidate}));
     }
+}
 
-    function gotRemoteStream(event) {
-        console.log("got remote stream");
-        remoteVideo.src = window.URL.createObjectURL(event.stream);
-    }
+function gotRemoteStream(event) {
+    console.log("got remote stream");
+    remoteVideo.src = window.URL.createObjectURL(event.stream);
+}
 
-    function createOfferError(error) {
-        console.log(error);
-    }
+function createOfferError(error) {
+    console.log(error);
 }
 
 function gotMessageFromServer(message) {
