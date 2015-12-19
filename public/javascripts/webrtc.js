@@ -4,6 +4,7 @@ var peerConnection;
 var peerConnectionConfig = {'iceServers': [{'url': 'stun:stun.services.mozilla.com'}, {'url': 'stun:stun.l.google.com:19302'}]};
 var channel;
 var dataConstraint;
+var recieveChannel;
 
 navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
 window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
@@ -38,8 +39,8 @@ function start(isCaller) {
     peerConnection = new RTCPeerConnection(peerConnectionConfig);
     channel = peerConnection.createDataChannel('sendDataChannel', dataConstraint);
     peerConnection.onicecandidate = gotIceCandidate;
-    peerConnection.onaddstream = gotRemoteStream;
-    peerConnection.addStream(localStream);
+    channel.onopen = onSendChannelStateChange;
+    peerConnection.ondatachannel = receiveChannelCallback;
 
 
     if(isCaller) {
@@ -77,9 +78,22 @@ function gotDescription(description) {
     );
 }
 
-function gotRemoteStream(event) {
-    console.log('got remote stream');
-    remoteVideo.src = window.URL.createObjectURL(event.stream);
+function trace(str) { console.log(str) }
+
+function receiveChannelCallback(event) {
+    trace('Receive Channel Callback');
+    recieveChannel = event.channel;
+    recieveChannel.onmessage = onReceiveMessageCallback;
+}
+
+function onReceiveMessageCallback(event) {
+    trace('Received Message');
+    console.log(event.data);
+}
+
+function onSendChannelStateChange() {
+    var readyState = channel.readyState;
+    trace('Send channel state is: ' + readyState);
 }
 
 function errorHandler(error) {
