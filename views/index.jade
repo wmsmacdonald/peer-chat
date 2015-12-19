@@ -2,8 +2,6 @@ extends layout
 
 block content
   script(src="javascripts/webrtc.js")
-  video(id="localVideo", autoplay, muted, style="width:40%;")
-  video(id="remoteVideo", autoplay, style="width:40%;")
   br
   input(type="button", id="start", onclick="start(true)", value="Start Video")
   script pageReady();
