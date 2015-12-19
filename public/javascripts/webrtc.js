@@ -2,6 +2,8 @@ var localVideo;
 var remoteVideo;
 var peerConnection;
 var peerConnectionConfig = {'iceServers': [{'url': 'stun:stun.services.mozilla.com'}, {'url': 'stun:stun.l.google.com:19302'}]};
+var channel;
+var dataConstraint;
 
 navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
 window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
@@ -17,11 +19,11 @@ function pageReady() {
 
     var constraints = {
         video: true,
-        audio: true,
+        audio: false
     };
 
     if(navigator.getUserMedia) {
-        navigator.getUserMedia(constraints, getUserMediaSuccess, getUserMediaError);
+        navigator.getUserMedia(constraints, getUserMediaSuccess, errorHandler);
     } else {
         alert('Your browser does not support getUserMedia API');
     }
@@ -32,41 +34,17 @@ function getUserMediaSuccess(stream) {
     localVideo.src = window.URL.createObjectURL(stream);
 }
 
-function getUserMediaError(error) {
-    console.log(error);
-}
-
 function start(isCaller) {
     peerConnection = new RTCPeerConnection(peerConnectionConfig);
+    channel = peerConnection.createDataChannel('sendDataChannel', dataConstraint);
     peerConnection.onicecandidate = gotIceCandidate;
     peerConnection.onaddstream = gotRemoteStream;
     peerConnection.addStream(localStream);
 
+
     if(isCaller) {
-        peerConnection.createOffer(gotDescription, createOfferError);
+        peerConnection.createOffer(gotDescription, errorHandler);
     }
-}
-
-function gotDescription(description) {
-    console.log('got description');
-    peerConnection.setLocalDescription(description, function () {
-        serverConnection.send(JSON.stringify({'sdp': description}));
-    }, function() {console.log('set description error')});
-}
-
-function gotIceCandidate(event) {
-    if(event.candidate != null) {
-        serverConnection.send(JSON.stringify({'ice': event.candidate}));
-    }
-}
-
-function gotRemoteStream(event) {
-    console.log("got remote stream");
-    remoteVideo.src = window.URL.createObjectURL(event.stream);
-}
-
-function createOfferError(error) {
-    console.log(error);
 }
 
 function gotMessageFromServer(message) {
@@ -75,9 +53,35 @@ function gotMessageFromServer(message) {
     var signal = JSON.parse(message.data);
     if(signal.sdp) {
         peerConnection.setRemoteDescription(new RTCSessionDescription(signal.sdp), function() {
-            peerConnection.createAnswer(gotDescription, createAnswerError);
-        });
+            peerConnection.createAnswer(gotDescription, errorHandler);
+        }, errorHandler);
     } else if(signal.ice) {
         peerConnection.addIceCandidate(new RTCIceCandidate(signal.ice));
     }
+}
+
+function gotIceCandidate(event) {
+    if(event.candidate != null) {
+        serverConnection.send(JSON.stringify({'ice': event.candidate}));
+    }
+}
+
+function gotDescription(description) {
+    console.log('got description');
+    peerConnection.setLocalDescription(description, function () {
+            serverConnection.send(JSON.stringify({'sdp': description}));
+        },
+        function() {
+            console.log('set description error')
+        }
+    );
+}
+
+function gotRemoteStream(event) {
+    console.log('got remote stream');
+    remoteVideo.src = window.URL.createObjectURL(event.stream);
+}
+
+function errorHandler(error) {
+    console.log(error);
 }
